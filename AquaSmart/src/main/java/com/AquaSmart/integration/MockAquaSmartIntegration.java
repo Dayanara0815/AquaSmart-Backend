@@ -73,6 +73,7 @@ public class MockAquaSmartIntegration implements AquaSmartIntegration {
     @Override
     public List<AlertDto> fallbackAlerts() {
         return List.of(new AlertDto(
+                1L,
                 true,
                 "AVISO DE CORTE DE AGUA",
                 "Mañana de 8:00 a.m. - 2:00 p.m.",
@@ -83,30 +84,52 @@ public class MockAquaSmartIntegration implements AquaSmartIntegration {
     }
 
     @Override
-    public String answerQuestion(String question) {
+    public String answerQuestion(String question, String email) {
         if (question == null || question.isBlank()) {
             return "Escribe una consulta para analizar el consumo de agua.";
         }
 
         String q = question.toLowerCase().trim();
 
-        // 1. Obtener datos del usuario titular
-        Optional<Titular> tOpt = titularRepository.findAll().stream().findFirst();
+        // 1. Obtener datos del usuario titular según email
+        Optional<Titular> tOpt = Optional.empty();
+        if (email != null && !email.isBlank()) {
+            tOpt = titularRepository.findAll().stream()
+                    .filter(t -> email.trim().equalsIgnoreCase(t.correo))
+                    .findFirst();
+        }
+        if (tOpt.isEmpty()) {
+            tOpt = titularRepository.findAll().stream().findFirst();
+        }
         String nombre = tOpt.map(titular -> titular.nombreTitular).orElse("María Fernanda");
 
-        // 2. Obtener datos del medidor
-        Optional<Medidor> mOpt = medidorRepository.findAll().stream().findFirst();
+        // 2. Obtener datos del medidor del titular
+        Optional<Medidor> mOpt = Optional.empty();
+        if (tOpt.isPresent()) {
+            Titular titular = tOpt.get();
+            mOpt = medidorRepository.findAll().stream()
+                    .filter(m -> m.titular != null && titular.idTitular.equals(m.titular.idTitular))
+                    .findFirst();
+        }
+        if (mOpt.isEmpty()) {
+            mOpt = medidorRepository.findAll().stream().findFirst();
+        }
         String medidorId = mOpt.map(medidor -> medidor.idMedidor).orElse("ASM-2048");
         boolean valvulaAbierta = mOpt.map(med -> med.estadoValvula != null && "Abierta".equalsIgnoreCase(med.estadoValvula.nombreEstadoValvula)).orElse(true);
 
-        // 3. Obtener alertas
-        List<Alerta> alertas = alertaRepository.findAllWithDetails();
+        // 3. Obtener alertas específicas del medidor
+        final String finalMedidorIdForAlerts = medidorId;
+        List<Alerta> alertas = alertaRepository.findAllWithDetails().stream()
+                .filter(a -> a.medidor != null && finalMedidorIdForAlerts.equalsIgnoreCase(a.medidor.idMedidor))
+                .toList();
         long alertasActivasCount = alertas.stream()
-                .filter(a -> a.tipoEstado != null && "Activa".equalsIgnoreCase(a.tipoEstado.nombreTipoEstado))
+                .filter(a -> a.tipoEstado != null && ("Activa".equalsIgnoreCase(a.tipoEstado.nombreTipoEstado) || "Pendiente".equalsIgnoreCase(a.tipoEstado.nombreTipoEstado)))
                 .count();
 
-        // 4. Obtener consumo acumulado semanal y diario
-        List<LecturaConsumo> lecturas = lecturaConsumoRepository.findAll();
+        // 4. Obtener consumo acumulado semanal y diario del medidor específico
+        List<LecturaConsumo> lecturas = lecturaConsumoRepository.findAll().stream()
+                .filter(l -> l.medidor != null && finalMedidorIdForAlerts.equalsIgnoreCase(l.medidor.idMedidor))
+                .toList();
         double totalLiters = lecturas.stream()
                 .filter(l -> l.volumenRegistrado != null)
                 .mapToDouble(l -> l.volumenRegistrado.doubleValue())

@@ -324,8 +324,8 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     @Transactional(readOnly = true)
-    public ChatResponseDto askAi(String question) {
-        return new ChatResponseDto(aquaSmartIntegration.answerQuestion(question));
+    public ChatResponseDto askAi(String question, String email) {
+        return new ChatResponseDto(aquaSmartIntegration.answerQuestion(question, email));
     }
 
     private AlertDto toAlertDto(Alerta alerta) {
@@ -334,9 +334,10 @@ public class DashboardServiceImpl implements DashboardService {
         String timestamp = (alerta.fecha == null || alerta.hora == null)
                 ? ""
                 : LocalDateTime.of(alerta.fecha, alerta.hora).format(TIMESTAMP_FORMAT);
-        boolean active = state.isBlank() || !state.equalsIgnoreCase("Inactiva");
+        boolean active = state.isBlank() || (!state.equalsIgnoreCase("Inactiva") && !state.equalsIgnoreCase("Cerrada") && !state.equalsIgnoreCase("Resuelta") && !state.equalsIgnoreCase("Cumplido"));
 
         return new AlertDto(
+                alerta.idAlerta,
                 active,
                 alerta.descripcion,
                 timestamp,

@@ -31,9 +31,17 @@ public class UserController {
 
     @GetMapping("/user/current")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public Object getCurrentUser() {
+    public Object getCurrentUser(@org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
         try {
-            Optional<Titular> t = titularRepository.findAll().stream().findFirst();
+            Optional<Titular> t;
+            if (email != null && !email.isBlank()) {
+                t = titularRepository.findAll().stream()
+                        .filter(tit -> email.trim().equalsIgnoreCase(tit.correo))
+                        .findFirst();
+            } else {
+                t = titularRepository.findAll().stream().findFirst();
+            }
+
             if (t.isPresent()) {
                 Titular tt = t.get();
                 StringBuilder sb = new StringBuilder();
@@ -47,9 +55,9 @@ public class UserController {
                     sb.append(tt.apellidoMaterno.trim());
                 }
                 String full = sb.length() == 0 ? "Usuario X" : sb.toString();
-                return new CurrentUserDto(tt.idTitular, full, tt.correo == null ? "" : tt.correo);
+                return new CurrentUserDto(tt.idTitular, full, tt.correo == null ? "" : tt.correo, tt.rol == null ? "DOMESTICO" : tt.rol);
             }
-            return new CurrentUserDto(0L, "Usuario X", "user@example.local");
+            return new CurrentUserDto(0L, "Usuario X", "user@example.local", "DOMESTICO");
         } catch (Exception ex) {
             log.error("Error en getCurrentUser", ex);
             return Map.of("error", ex.getClass().getName(), "message", ex.getMessage());

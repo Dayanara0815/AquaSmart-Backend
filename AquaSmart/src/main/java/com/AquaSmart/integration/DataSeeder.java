@@ -31,6 +31,8 @@ import com.AquaSmart.repository.TipoAlertaRepository;
 import com.AquaSmart.repository.TipoEstadoRepository;
 import com.AquaSmart.repository.TipoFlujoRepository;
 
+import com.AquaSmart.repository.PreferenciaRepository;
+
 @Component
 public class DataSeeder {
 
@@ -44,6 +46,7 @@ public class DataSeeder {
     private final LecturaConsumoRepository lecturaConsumoRepository;
     private final AlertaRepository alertaRepository;
     private final FacturaMensualRepository facturaMensualRepository;
+    private final PreferenciaRepository preferenciaRepository;
 
     public DataSeeder(
             TitularRepository titularRepository,
@@ -55,7 +58,8 @@ public class DataSeeder {
             MedidorRepository medidorRepository,
             LecturaConsumoRepository lecturaConsumoRepository,
             AlertaRepository alertaRepository,
-            FacturaMensualRepository facturaMensualRepository) {
+            FacturaMensualRepository facturaMensualRepository,
+            PreferenciaRepository preferenciaRepository) {
         this.titularRepository = titularRepository;
         this.estadoValvulaRepository = estadoValvulaRepository;
         this.tipoFlujoRepository = tipoFlujoRepository;
@@ -66,14 +70,33 @@ public class DataSeeder {
         this.lecturaConsumoRepository = lecturaConsumoRepository;
         this.alertaRepository = alertaRepository;
         this.facturaMensualRepository = facturaMensualRepository;
+        this.preferenciaRepository = preferenciaRepository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seedIfNeeded() {
-        if (medidorRepository.count() > 0) {
+        if (titularRepository.count() >= 4) {
             return;
         }
+
+        // Limpieza preventiva para evitar colisiones y asegurar sembrado fresco
+        alertaRepository.deleteAll();
+        facturaMensualRepository.deleteAll();
+        lecturaConsumoRepository.deleteAll();
+        preferenciaRepository.deleteAll();
+        medidorRepository.deleteAll();
+        titularRepository.deleteAll();
+
+        // Limpiar también catálogos para evitar duplicados al re-sembrar
+        estadoFacturaMensualRepository.deleteAll();
+        estadoValvulaRepository.deleteAll();
+        tipoAlertaRepository.deleteAll();
+        tipoEstadoRepository.deleteAll();
+        tipoFlujoRepository.deleteAll();
+
+        // Forzar la ejecución inmediata de las eliminaciones en PostgreSQL
+        titularRepository.flush();
 
         EstadoValvula abierta = estadoValvulaRepository.save(new EstadoValvula("Abierta"));
         EstadoValvula cerrada = estadoValvulaRepository.save(new EstadoValvula("Cerrada"));
@@ -93,10 +116,22 @@ public class DataSeeder {
         EstadoFacturaMensual observada = estadoFacturaMensualRepository.save(new EstadoFacturaMensual("Observada"));
 
         Titular titular = titularRepository.save(new Titular(
-                "María Fernanda", "Quispe", "Rojas", "maria.quispe@example.com", 34, "987654321"));
+                "María Fernanda", "Quispe", "Rojas", "maria.quispe@example.com", 34, "987654321", "DOMESTICO"));
+
+        Titular comercio = titularRepository.save(new Titular(
+                "Luis", "Condori", "Mendoza", "luis.condori@example.com", 38, "987654322", "COMERCIO"));
+
+        Titular tecnico = titularRepository.save(new Titular(
+                "Carlos", "Mendoza", "Ramos", "carlos.mendoza@example.com", 47, "987654323", "TECNICO"));
+
+        Titular municipal = titularRepository.save(new Titular(
+                "Alexis", "Maza", "Lozada", "alexis.maza@example.com", 28, "987654324", "MUNICIPAL"));
 
         Medidor medidor = medidorRepository.save(new Medidor(
                 "ASM-2048", LocalDate.now().minusMonths(8), titular, abierta));
+
+        Medidor medidorComercio = medidorRepository.save(new Medidor(
+                "ASM-LAVANDERIA", LocalDate.now().minusMonths(6), comercio, abierta));
 
         LocalDate today = LocalDate.now();
         List<LecturaConsumo> lecturas = List.of(

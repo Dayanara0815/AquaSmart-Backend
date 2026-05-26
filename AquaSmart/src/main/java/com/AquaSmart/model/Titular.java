@@ -34,15 +34,19 @@ public class Titular {
     @Column(name = "celular", length = 15)
     public String celular;
 
+    @Column(name = "rol", length = 50)
+    public String rol;
+
     public Titular() {
     }
 
-    public Titular(String nombreTitular, String apellidoPaterno, String apellidoMaterno, String correo, Integer edad, String celular) {
+    public Titular(String nombreTitular, String apellidoPaterno, String apellidoMaterno, String correo, Integer edad, String celular, String rol) {
         this.nombreTitular = nombreTitular;
         this.apellidoPaterno = apellidoPaterno;
         this.apellidoMaterno = apellidoMaterno;
         this.correo = correo;
         this.edad = edad;
         this.celular = celular;
+        this.rol = rol;
     }
 }

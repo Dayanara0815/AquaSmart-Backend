@@ -14,5 +14,5 @@ public interface AquaSmartIntegration {
 
     List<AlertDto> fallbackAlerts();
 
-    String answerQuestion(String question);
+    String answerQuestion(String question, String email);
 }

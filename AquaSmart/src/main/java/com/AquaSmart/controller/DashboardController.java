@@ -68,6 +68,6 @@ public class DashboardController {
 
     @PostMapping("/ai/chat")
     public ResponseEntity<ChatResponseDto> askAi(@RequestBody ChatRequestDto request) {
-        return ResponseEntity.ok(dashboardService.askAi(request.question()));
+        return ResponseEntity.ok(dashboardService.askAi(request.question(), request.email()));
     }
 }

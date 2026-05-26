@@ -26,5 +26,5 @@ public interface DashboardService {
 
     PresenceStateDto setHomePresence(boolean home);
 
-    ChatResponseDto askAi(String question);
+    ChatResponseDto askAi(String question, String email);
 }

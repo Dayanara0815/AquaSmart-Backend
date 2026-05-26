@@ -1,6 +1,7 @@
 package com.AquaSmart.dto;
 
 public record AlertDto(
+        Long id,
         boolean active,
         String message,
         String schedule,

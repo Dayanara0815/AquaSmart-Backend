@@ -25,8 +25,9 @@ public class ReportController {
     @GetMapping("/reports/weekly")
     public WeeklyReportDto getWeeklyReport(
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
-        return reportService.getWeeklyReport(parseDate(from), parseDate(to));
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String email) {
+        return reportService.getWeeklyReport(parseDate(from), parseDate(to), email);
     }
 
     private LocalDate parseDate(String value) {

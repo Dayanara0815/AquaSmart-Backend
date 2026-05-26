@@ -6,6 +6,6 @@ import com.AquaSmart.dto.WeeklyReportDto;
 
 public interface ReportService {
 
-    WeeklyReportDto getWeeklyReport(LocalDate from, LocalDate to);
+    WeeklyReportDto getWeeklyReport(LocalDate from, LocalDate to, String email);
 
 }

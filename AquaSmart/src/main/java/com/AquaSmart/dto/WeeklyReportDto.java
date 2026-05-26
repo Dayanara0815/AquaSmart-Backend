@@ -11,5 +11,7 @@ public record WeeklyReportDto(
         String peakDay,
         double peakLiters,
         int anomalyCount,
-        List<WeeklyConsumptionDto> dailyConsumption) {
+        List<WeeklyConsumptionDto> dailyConsumption,
+        String titularName,
+        String medidorId) {
 }

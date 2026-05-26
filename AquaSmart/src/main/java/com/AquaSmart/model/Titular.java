@@ -37,6 +37,9 @@ public class Titular {
     @Column(name = "rol", length = 50)
     public String rol;
 
+    @Column(name = "foto_perfil", columnDefinition = "TEXT")
+    public String fotoPerfil;
+
     public Titular() {
     }
 

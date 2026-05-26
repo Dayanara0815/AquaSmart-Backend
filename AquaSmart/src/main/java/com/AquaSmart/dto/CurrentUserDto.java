@@ -4,6 +4,7 @@ public record CurrentUserDto(
         Long id,
         String fullName,
         String email,
-        String rol
+        String rol,
+        String fotoPerfil
 ) {
 }

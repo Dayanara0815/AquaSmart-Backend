@@ -12,4 +12,11 @@ public interface LecturaConsumoRepository extends JpaRepository<LecturaConsumo, 
 	@EntityGraph(attributePaths = {"medidor", "medidor.estadoValvula"})
 	@Query("select l from LecturaConsumo l")
 	List<LecturaConsumo> findAllWithDetails();
+
+	@EntityGraph(attributePaths = {"medidor", "tipoFlujo"})
+	@Query("select l from LecturaConsumo l where l.medidor.idMedidor = :medidorId and l.fecha >= :from and l.fecha <= :to")
+	List<LecturaConsumo> findByMedidorAndDateRange(
+			@org.springframework.data.repository.query.Param("medidorId") String medidorId,
+			@org.springframework.data.repository.query.Param("from") java.time.LocalDate from,
+			@org.springframework.data.repository.query.Param("to") java.time.LocalDate to);
 }

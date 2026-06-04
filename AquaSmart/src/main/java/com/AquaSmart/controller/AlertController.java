@@ -41,8 +41,22 @@ public class AlertController {
     public Object reportMunicipalLeak(@RequestBody Map<String, String> body) {
         try {
             String location = body.getOrDefault("location", "").trim();
-            if (location.isBlank()) {
-                return Map.of("error", "ValidationFailed", "message", "La ubicación es obligatoria.");
+            String dateStr = body.get("date");
+            String typeStr = body.getOrDefault("type", "Fuga").trim();
+            String statusStr = body.getOrDefault("status", "Pendiente").trim();
+            String customDesc = body.get("description");
+
+            if (location.isBlank() && (customDesc == null || customDesc.isBlank())) {
+                return Map.of("error", "ValidationFailed", "message", "La ubicación o descripción es obligatoria.");
+            }
+
+            LocalDate fecha = LocalDate.now();
+            if (dateStr != null && !dateStr.isBlank()) {
+                try {
+                    fecha = LocalDate.parse(dateStr);
+                } catch (Exception e) {
+                    log.warn("Formato de fecha invalido, usando hoy: {}", dateStr);
+                }
             }
 
             // Buscar primer medidor para asociarle la alerta obligatoria
@@ -52,23 +66,29 @@ public class AlertController {
             }
             Medidor medidor = firstMedidorOpt.get();
 
-            // Buscar o crear TipoAlerta "Fuga"
+            // Buscar o crear TipoAlerta
+            final String finalTypeStr = typeStr;
             TipoAlerta tipoAlerta = tipoAlertaRepository.findAll().stream()
-                    .filter(ta -> "Fuga".equalsIgnoreCase(ta.nombreTipoAlerta))
+                    .filter(ta -> finalTypeStr.equalsIgnoreCase(ta.nombreTipoAlerta))
                     .findFirst()
-                    .orElseGet(() -> tipoAlertaRepository.save(new TipoAlerta("Fuga")));
+                    .orElseGet(() -> tipoAlertaRepository.save(new TipoAlerta(finalTypeStr)));
 
-            // Buscar o crear TipoEstado "Pendiente"
+            // Buscar o crear TipoEstado
+            final String finalStatusStr = statusStr;
             TipoEstado tipoEstado = tipoEstadoRepository.findAll().stream()
-                    .filter(te -> "Pendiente".equalsIgnoreCase(te.nombreTipoEstado))
+                    .filter(te -> finalStatusStr.equalsIgnoreCase(te.nombreTipoEstado))
                     .findFirst()
-                    .orElseGet(() -> tipoEstadoRepository.save(new TipoEstado("Pendiente")));
+                    .orElseGet(() -> tipoEstadoRepository.save(new TipoEstado(finalStatusStr)));
+
+            String descripcion = (customDesc != null && !customDesc.isBlank()) 
+                    ? customDesc.trim() 
+                    : ("Fuga reportada en la via publica: " + location);
 
             // Guardar nueva alerta
             Alerta alerta = new Alerta(
-                    LocalDate.now(),
+                    fecha,
                     LocalTime.now(),
-                    "Fuga reportada en la vía pública: " + location,
+                    descripcion,
                     tipoAlerta,
                     tipoEstado,
                     medidor

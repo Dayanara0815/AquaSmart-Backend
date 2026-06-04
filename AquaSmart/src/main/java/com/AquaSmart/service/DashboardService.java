@@ -9,12 +9,15 @@ import com.AquaSmart.dto.DashboardStatusDto;
 import com.AquaSmart.dto.PresenceStateDto;
 import com.AquaSmart.dto.ValveHistoryDto;
 import com.AquaSmart.dto.ValveStateDto;
+import com.AquaSmart.dto.ChatMessageDto;
+import com.AquaSmart.dto.MedidorDto;
+import com.AquaSmart.dto.AutoCloseStateDto;
 
 public interface DashboardService {
 
-    DashboardStatusDto getStatus();
+    DashboardStatusDto getStatus(String email);
 
-    AiProjectionDto getProjection();
+    AiProjectionDto getProjection(String email);
 
     List<AlertDto> getAlerts();
 
@@ -22,9 +25,13 @@ public interface DashboardService {
 
     List<ValveHistoryDto> getValveHistory();
 
-    ValveStateDto setValve(boolean open);
+    ValveStateDto setValve(boolean open, String email);
 
-    PresenceStateDto setHomePresence(boolean home);
+    PresenceStateDto setHomePresence(boolean home, String email);
 
-    ChatResponseDto askAi(String question, String email);
+    ChatResponseDto askAi(String question, String email, List<ChatMessageDto> history);
+
+    List<MedidorDto> getMedidores();
+
+    AutoCloseStateDto setAutoClose(boolean autoClose, String email);
 }

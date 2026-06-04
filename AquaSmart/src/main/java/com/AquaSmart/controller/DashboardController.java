@@ -12,6 +12,7 @@ import com.AquaSmart.dto.PresenceStateDto;
 import com.AquaSmart.dto.ValveHistoryDto;
 import com.AquaSmart.dto.ValveCommandDto;
 import com.AquaSmart.dto.ValveStateDto;
+import com.AquaSmart.dto.MedidorDto;
 import com.AquaSmart.service.DashboardService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,13 +33,24 @@ public class DashboardController {
     }
 
     @GetMapping("/water/status")
-    public DashboardStatusDto getWaterStatus() {
-        return dashboardService.getStatus();
+    public DashboardStatusDto getWaterStatus(@org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
+        return dashboardService.getStatus(email);
     }
 
     @GetMapping("/ai/projection")
-    public AiProjectionDto getAiProjection() {
-        return dashboardService.getProjection();
+    public AiProjectionDto getAiProjection(@org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
+        return dashboardService.getProjection(email);
+    }
+
+    @GetMapping("/water/medidores")
+    public ResponseEntity<?> getMedidores() {
+        try {
+            return ResponseEntity.ok(dashboardService.getMedidores());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error in getMedidores: " + e.getMessage() + "\n" + java.util.Arrays.toString(e.getStackTrace()));
+        }
     }
 
     @GetMapping("/alerts")
@@ -57,17 +69,22 @@ public class DashboardController {
     }
 
     @PutMapping("/water/valve")
-    public ValveStateDto setValve(@RequestBody ValveCommandDto request) {
-        return dashboardService.setValve(request.open());
+    public ValveStateDto setValve(@RequestBody ValveCommandDto request, @org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
+        return dashboardService.setValve(request.open(), email);
     }
 
     @PutMapping("/water/presence")
-    public PresenceStateDto setHomePresence(@RequestBody PresenceCommandDto request) {
-        return dashboardService.setHomePresence(request.home());
+    public PresenceStateDto setHomePresence(@RequestBody PresenceCommandDto request, @org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
+        return dashboardService.setHomePresence(request.home(), email);
+    }
+
+    @PutMapping("/water/autoclose")
+    public com.AquaSmart.dto.AutoCloseStateDto setAutoClose(@RequestBody com.AquaSmart.dto.AutoCloseCommandDto request, @org.springframework.web.bind.annotation.RequestParam(required = false) String email) {
+        return dashboardService.setAutoClose(request.autoClose(), email);
     }
 
     @PostMapping("/ai/chat")
     public ResponseEntity<ChatResponseDto> askAi(@RequestBody ChatRequestDto request) {
-        return ResponseEntity.ok(dashboardService.askAi(request.question(), request.email()));
+        return ResponseEntity.ok(dashboardService.askAi(request.question(), request.email(), request.history()));
     }
 }

@@ -25,7 +25,7 @@ public class Medidor {
     @JoinColumn(name = "id_titular", nullable = false)
     public Titular titular;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_estado_valvula", nullable = false)
     public EstadoValvula estadoValvula;
 

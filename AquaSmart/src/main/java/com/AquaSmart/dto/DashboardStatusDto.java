@@ -7,7 +7,9 @@ public record DashboardStatusDto(
         double currentFlow,
         boolean valveOpen,
         boolean isHome,
+        boolean autoCierreFuga,
         String lastUpdated,
         AlertDto alert,
-        AiProjectionDto aiProjection) {
+        AiProjectionDto aiProjection,
+        long medidoresCount) {
 }

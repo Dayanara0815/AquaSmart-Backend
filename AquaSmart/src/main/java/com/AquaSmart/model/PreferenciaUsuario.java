@@ -25,11 +25,19 @@ public class PreferenciaUsuario {
     @Column(name = "tema", length = 20)
     public String tema;
 
+    @Column(name = "presencia_casa")
+    public Boolean presenciaCasa = true;
+
+    @Column(name = "auto_cierre_fuga")
+    public Boolean autoCierreFuga = true;
+
     public PreferenciaUsuario() {
     }
 
     public PreferenciaUsuario(Titular titular, String tema) {
         this.titular = titular;
         this.tema = tema;
+        this.presenciaCasa = true;
+        this.autoCierreFuga = true;
     }
 }

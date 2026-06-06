@@ -315,7 +315,7 @@ public class MockAquaSmartIntegration implements AquaSmartIntegration {
 
     private String callGeminiApi(String apiKey, String systemPrompt, List<ChatMessageDto> history, String currentQuestion) {
         try {
-            java.net.URL url = new java.net.URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey);
+            java.net.URL url = new java.net.URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey);
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");

@@ -19,4 +19,8 @@ public interface LecturaConsumoRepository extends JpaRepository<LecturaConsumo, 
 			@org.springframework.data.repository.query.Param("medidorId") String medidorId,
 			@org.springframework.data.repository.query.Param("from") java.time.LocalDate from,
 			@org.springframework.data.repository.query.Param("to") java.time.LocalDate to);
+
+	@org.springframework.data.jpa.repository.Modifying
+	@Query("delete from LecturaConsumo l where l.fecha < :cutoffDate")
+	void deleteOldReadings(@org.springframework.data.repository.query.Param("cutoffDate") java.time.LocalDate cutoffDate);
 }

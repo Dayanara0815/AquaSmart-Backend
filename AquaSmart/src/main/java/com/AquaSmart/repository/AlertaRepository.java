@@ -12,4 +12,8 @@ public interface AlertaRepository extends JpaRepository<Alerta, Long> {
 	@EntityGraph(attributePaths = {"tipoAlerta", "tipoEstado", "medidor"})
 	@Query("select a from Alerta a")
 	List<Alerta> findAllWithDetails();
+
+	@org.springframework.data.jpa.repository.Modifying
+	@Query("delete from Alerta a where a.fecha < :cutoffDate")
+	void deleteOldAlerts(@org.springframework.data.repository.query.Param("cutoffDate") java.time.LocalDate cutoffDate);
 }

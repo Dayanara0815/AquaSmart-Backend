@@ -236,6 +236,19 @@ public class DashboardServiceImpl implements DashboardService {
                 count);
     }
 
+    @Scheduled(fixedRate = 3600000) // Runs every hour (3600000 ms) to keep DB clean
+    @Transactional
+    public void cleanOldData() {
+        LocalDate cutoffDate = LocalDate.now().minusDays(7);
+        try {
+            lecturaConsumoRepository.deleteOldReadings(cutoffDate);
+            alertaRepository.deleteOldAlerts(cutoffDate);
+            System.out.println("DEBUG cleanOldData: Successfully cleaned up readings and alerts older than " + cutoffDate);
+        } catch (Exception e) {
+            System.err.println("ERROR cleanOldData: Failed to clean up old readings/alerts: " + e.getMessage());
+        }
+    }
+
     @Scheduled(fixedRate = 6000)
     @Transactional
     public void simulateSensorReadings() {

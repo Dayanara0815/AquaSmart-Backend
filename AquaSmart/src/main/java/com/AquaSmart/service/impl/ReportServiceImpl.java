@@ -81,6 +81,7 @@ public class ReportServiceImpl implements ReportService {
         }
 
         java.util.Set<LocalDate> anomalousDays = new java.util.HashSet<>();
+        java.util.Set<LocalDate> datesWithReadings = new java.util.HashSet<>();
         if (finalMedidor.isPresent()) {
             String targetMedidorId = finalMedidor.get().idMedidor;
             List<LecturaConsumo> rangeLecturas = lecturaConsumoRepository.findByMedidorAndDateRange(targetMedidorId, safeFrom, safeTo);
@@ -89,6 +90,7 @@ public class ReportServiceImpl implements ReportService {
                     continue;
                 }
                 litersByDay.compute(lectura.fecha, (key, value) -> value == null ? lectura.volumenRegistrado : value.add(lectura.volumenRegistrado));
+                datesWithReadings.add(lectura.fecha);
                 if (lectura.tipoFlujo != null && "Anómalo".equalsIgnoreCase(lectura.tipoFlujo.nombreTipoFlujo)) {
                     anomalousDays.add(lectura.fecha);
                 }
@@ -106,6 +108,15 @@ public class ReportServiceImpl implements ReportService {
         }
 
         double average = points.stream().mapToDouble(WeeklyConsumptionDto::liters).average().orElse(0.0);
+        double averageForAnomaly = points.stream()
+                .filter(p -> {
+                    LocalDate d = LocalDate.parse(p.date(), DATE_FORMAT);
+                    return datesWithReadings.contains(d);
+                })
+                .mapToDouble(WeeklyConsumptionDto::liters)
+                .average()
+                .orElse(0.0);
+
         double peak = points.stream().mapToDouble(WeeklyConsumptionDto::liters).max().orElse(0.0);
         String peakDay = points.stream()
                 .max(Comparator.comparingDouble(WeeklyConsumptionDto::liters))
@@ -116,7 +127,7 @@ public class ReportServiceImpl implements ReportService {
         List<WeeklyConsumptionDto> withAnomalies = points.stream()
                 .map(point -> {
                     LocalDate d = LocalDate.parse(point.date(), DATE_FORMAT);
-                    boolean isAnomaly = finalAnomalousDays.contains(d) || (average > 0 && point.liters() > average * 1.5);
+                    boolean isAnomaly = finalAnomalousDays.contains(d) || (averageForAnomaly > 0 && point.liters() > averageForAnomaly * 1.5);
                     return new WeeklyConsumptionDto(
                             point.date(),
                             point.dayLabel(),

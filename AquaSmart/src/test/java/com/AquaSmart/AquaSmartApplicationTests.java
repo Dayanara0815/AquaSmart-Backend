@@ -89,4 +89,38 @@ class AquaSmartApplicationTests {
 		assertNotNull(m3);
 		assertEquals("Cerrada", m3.estadoValvula.nombreEstadoValvula);
 	}
+
+	@Autowired
+	private com.AquaSmart.controller.UserController userController;
+
+	@Autowired
+	private com.AquaSmart.service.ReportService reportService;
+
+	@Test
+	void testNewUserReportAnomalyCount() {
+		String testEmail = "test.newuser@example.com";
+		java.util.Map<String, String> body = java.util.Map.of(
+			"nombre", "Test",
+			"apellidoPaterno", "User",
+			"correo", testEmail,
+			"rol", "DOMESTICO"
+		);
+		
+		// Registrar el nuevo usuario
+		Object registerResult = userController.registerUser(body);
+		assertNotNull(registerResult);
+		
+		// Obtener el reporte semanal
+		java.time.LocalDate today = java.time.LocalDate.now();
+		com.AquaSmart.dto.WeeklyReportDto report = reportService.getWeeklyReport(
+			today.minusDays(6),
+			today,
+			testEmail
+		);
+		
+		assertNotNull(report);
+		// El usuario tiene 3 consumos normales sembrados de forma predeterminada
+		// No deberían considerarse anomalías (debe haber 0 días anómalos)
+		assertEquals(0, report.anomalyCount(), "Un nuevo usuario registrado con consumos normales debería tener 0 días anómalos.");
+	}
 }

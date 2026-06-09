@@ -112,7 +112,9 @@ public class UserController {
             Medidor medidor = new Medidor(meterId, LocalDate.now(), newTitular, abierta);
             medidorRepository.save(medidor);
 
-            // 4. Sembrar consumos base para que su panel no aparezca vacío
+            // 4. Sembrar consumos base (Comentado para la presentación)
+            // Se comentó este bloque para que cualquier usuario nuevo registrado en tiempo real aparezca limpio, con consumos en cero y sin historial previo.
+            /*
             TipoFlujo normal = tipoFlujoRepository.findAll().stream()
                     .filter(tf -> "Normal".equalsIgnoreCase(tf.nombreTipoFlujo))
                     .findFirst()
@@ -123,6 +125,7 @@ public class UserController {
             LecturaConsumo l2 = new LecturaConsumo(today.minusDays(1), LocalTime.of(8, 30), BigDecimal.valueOf(118.2), normal, medidor);
             LecturaConsumo l3 = new LecturaConsumo(today, LocalTime.of(9, 0), BigDecimal.valueOf(124.8), normal, medidor);
             lecturaConsumoRepository.saveAll(List.of(l1, l2, l3));
+            */
 
             // 5. Inicializar preferencia de tema
             PreferenciaUsuario pref = new PreferenciaUsuario(newTitular, "light");

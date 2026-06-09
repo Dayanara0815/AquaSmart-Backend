@@ -21,6 +21,7 @@ import com.AquaSmart.model.Titular;
 import com.AquaSmart.model.TipoAlerta;
 import com.AquaSmart.model.TipoEstado;
 import com.AquaSmart.model.TipoFlujo;
+import com.AquaSmart.model.PreferenciaUsuario;
 import com.AquaSmart.repository.AlertaRepository;
 import com.AquaSmart.repository.EstadoFacturaMensualRepository;
 import com.AquaSmart.repository.EstadoValvulaRepository;
@@ -195,5 +196,72 @@ public class DataSeeder {
                 new FacturaMensual("2026-05", BigDecimal.valueOf(2022.50), BigDecimal.valueOf(450.60), BigDecimal.valueOf(1571.90), BigDecimal.valueOf(7.86), emitida, medidorComercio),
                 new FacturaMensual("2026-04", BigDecimal.valueOf(1800.00), BigDecimal.valueOf(300.00), BigDecimal.valueOf(1500.00), BigDecimal.valueOf(7.50), observada, medidorComercio)
         ));
+
+        // =========================================================================
+        // SECCIÓN ADICIONADA PARA LA PRESENTACIÓN:
+        // Sembrado de 10 usuarios de demostración independientes con 7 días de historial.
+        // Cada usuario tiene consumos dinámicos y días anómalos independientes.
+        // =========================================================================
+        String[][] demoUsers = {
+            {"Juan", "Perez", "Gomez", "juan.perez@example.com", "DOMESTICO"},
+            {"Ana", "Gomez", "Torres", "ana.gomez@example.com", "DOMESTICO"},
+            {"Diego", "Torres", "Silva", "diego.torres@example.com", "DOMESTICO"},
+            {"Sofia", "Castro", "Rios", "sofia.castro@example.com", "COMERCIO"},
+            {"Mateo", "Ruiz", "Morales", "mateo.ruiz@example.com", "DOMESTICO"},
+            {"Valentina", "Diaz", "Romero", "valentina.diaz@example.com", "DOMESTICO"},
+            {"Nicolas", "Silva", "Herrera", "nicolas.silva@example.com", "DOMESTICO"},
+            {"Camila", "Morales", "Pinto", "camila.morales@example.com", "COMERCIO"},
+            {"Lucas", "Romero", "Castro", "lucas.romero@example.com", "DOMESTICO"},
+            {"Isabella", "Herrera", "Diaz", "isabella.herrera@example.com", "DOMESTICO"}
+        };
+
+        for (int u = 0; u < demoUsers.length; u++) {
+            String[] uData = demoUsers[u];
+            Titular t = titularRepository.save(new Titular(
+                    uData[0], uData[1], uData[2], uData[3], 25 + u, "99988877" + u, uData[4]));
+            
+            // Inicializar preferencia de usuario (light mode por defecto)
+            preferenciaRepository.save(new PreferenciaUsuario(t, "light"));
+
+            Medidor m = medidorRepository.save(new Medidor(
+                    "ASM-DEMO-" + (u + 1), today.minusDays(15), t, abierta));
+
+            for (int dayIndex = 6; dayIndex >= 0; dayIndex--) {
+                LocalDate date = today.minusDays(dayIndex);
+                double vol;
+                TipoFlujo flujo;
+
+                // Patrón único por usuario para anomalías (usando módulo) + probabilidad aleatoria
+                boolean isAnomalyDay = (dayIndex == (u % 7)) || (Math.random() < 0.15);
+
+                if (isAnomalyDay) {
+                    vol = 210.0 + Math.random() * 80.0;
+                    flujo = anomalo;
+                    alertaRepository.save(new Alerta(
+                            date,
+                            LocalTime.of(3 + (u % 4), 15),
+                            "Análisis IA: Consumo anómalo detectado de forma atípica.",
+                            fuga,
+                            activa,
+                            m
+                    ));
+                } else {
+                    if ("COMERCIO".equals(t.rol)) {
+                        vol = 170.0 + Math.random() * 60.0;
+                    } else {
+                        vol = 70.0 + Math.random() * 40.0;
+                    }
+                    flujo = normal;
+                }
+
+                lecturaConsumoRepository.save(new LecturaConsumo(
+                        date,
+                        LocalTime.of(8, 0),
+                        BigDecimal.valueOf(vol),
+                        flujo,
+                        m
+                ));
+            }
+        }
     }
 }

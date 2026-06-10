@@ -26,29 +26,44 @@ public class UserController {
     private final EstadoValvulaRepository estadoValvulaRepository;
     private final TipoFlujoRepository tipoFlujoRepository;
     private final LecturaConsumoRepository lecturaConsumoRepository;
+    private final com.AquaSmart.security.JwtUtil jwtUtil;
 
     public UserController(TitularRepository titularRepository, 
                           PreferenciaRepository preferenciaRepository,
                           MedidorRepository medidorRepository,
                           EstadoValvulaRepository estadoValvulaRepository,
                           TipoFlujoRepository tipoFlujoRepository,
-                          LecturaConsumoRepository lecturaConsumoRepository) {
+                          LecturaConsumoRepository lecturaConsumoRepository,
+                          com.AquaSmart.security.JwtUtil jwtUtil) {
         this.titularRepository = titularRepository;
         this.preferenciaRepository = preferenciaRepository;
         this.medidorRepository = medidorRepository;
         this.estadoValvulaRepository = estadoValvulaRepository;
         this.tipoFlujoRepository = tipoFlujoRepository;
         this.lecturaConsumoRepository = lecturaConsumoRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping("/user/current")
     @Transactional(readOnly = true)
-    public Object getCurrentUser(@RequestParam(required = false) String email) {
+    public Object getCurrentUser(
+            @RequestParam(required = false) String email,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            Optional<Titular> t;
-            if (email != null && !email.isBlank()) {
+            String targetEmail = email;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                String tokenEmail = jwtUtil.getEmailFromToken(token);
+                if (tokenEmail != null) {
+                    targetEmail = tokenEmail;
+                }
+            }
+
+            Optional<Titular> t = Optional.empty();
+            if (targetEmail != null && !targetEmail.isBlank()) {
+                final String finalEmail = targetEmail;
                 t = titularRepository.findAll().stream()
-                        .filter(tit -> email.trim().equalsIgnoreCase(tit.correo))
+                        .filter(tit -> finalEmail.trim().equalsIgnoreCase(tit.correo))
                         .findFirst();
             } else {
                 t = titularRepository.findAll().stream().findFirst();
@@ -67,9 +82,18 @@ public class UserController {
                     sb.append(tt.apellidoMaterno.trim());
                 }
                 String full = sb.length() == 0 ? "Usuario X" : sb.toString();
-                return new CurrentUserDto(tt.idTitular, full, tt.correo == null ? "" : tt.correo, tt.rol == null ? "DOMESTICO" : tt.rol, tt.fotoPerfil);
+                String token = jwtUtil.generateToken(tt.correo, tt.rol, full);
+                
+                return Map.of(
+                    "id", tt.idTitular,
+                    "fullName", full,
+                    "email", tt.correo == null ? "" : tt.correo,
+                    "rol", tt.rol == null ? "DOMESTICO" : tt.rol,
+                    "fotoPerfil", tt.fotoPerfil == null ? "" : tt.fotoPerfil,
+                    "token", token
+                );
             }
-            return new CurrentUserDto(0L, "Usuario X", "user@example.local", "DOMESTICO", null);
+            return Map.of("error", "UserNotFound", "message", "Usuario no encontrado.");
         } catch (Exception ex) {
             log.error("Error en getCurrentUser", ex);
             return Map.of("error", ex.getClass().getName(), "message", ex.getMessage());
@@ -84,10 +108,30 @@ public class UserController {
             String apellidoPaterno = body.getOrDefault("apellidoPaterno", "").trim();
             String apellidoMaterno = body.getOrDefault("apellidoMaterno", "").trim();
             String correo = body.getOrDefault("correo", "").trim();
+            String contrasena = body.getOrDefault("contrasena", "").trim();
             String rol = body.getOrDefault("rol", "DOMESTICO").trim().toUpperCase();
 
-            if (nombre.isBlank() || apellidoPaterno.isBlank() || correo.isBlank()) {
-                return Map.of("error", "ValidationFailed", "message", "Nombre, Apellido Paterno y Correo son campos obligatorios.");
+            if (nombre.isBlank() || apellidoPaterno.isBlank() || correo.isBlank() || contrasena.isBlank()) {
+                return Map.of("error", "ValidationFailed", "message", "Nombre, Apellido Paterno, Correo y Contraseña son obligatorios.");
+            }
+
+            String namePattern = "^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\\s]+$";
+            if (!nombre.matches(namePattern)) {
+                return Map.of("error", "ValidationFailed", "message", "El nombre solo debe contener letras y espacios.");
+            }
+            if (!apellidoPaterno.matches(namePattern)) {
+                return Map.of("error", "ValidationFailed", "message", "El apellido paterno solo debe contener letras y espacios.");
+            }
+            if (!apellidoMaterno.isBlank() && !apellidoMaterno.matches(namePattern)) {
+                return Map.of("error", "ValidationFailed", "message", "El apellido materno solo debe contener letras y espacios.");
+            }
+
+            if (!correo.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                return Map.of("error", "ValidationFailed", "message", "El formato del correo electrónico es inválido.");
+            }
+
+            if (contrasena.length() < 6) {
+                return Map.of("error", "ValidationFailed", "message", "La contraseña debe tener al menos 6 caracteres.");
             }
 
             // Validar si ya existe el correo
@@ -97,8 +141,11 @@ public class UserController {
                 return Map.of("error", "DuplicateEmail", "message", "El correo electrónico ya se encuentra registrado.");
             }
 
+            // Encriptar contraseña con BCrypt
+            String hashedContrasena = org.mindrot.jbcrypt.BCrypt.hashpw(contrasena, org.mindrot.jbcrypt.BCrypt.gensalt());
+
             // 1. Guardar Titular en PostgreSQL
-            Titular newTitular = new Titular(nombre, apellidoPaterno, apellidoMaterno, correo, 35, "999888777", rol);
+            Titular newTitular = new Titular(nombre, apellidoPaterno, apellidoMaterno, correo, 35, "999888777", rol, hashedContrasena);
             newTitular = titularRepository.save(newTitular);
 
             // 2. Resolver o Crear Estado de Válvula
@@ -112,29 +159,75 @@ public class UserController {
             Medidor medidor = new Medidor(meterId, LocalDate.now(), newTitular, abierta);
             medidorRepository.save(medidor);
 
-            // 4. Sembrar consumos base (Comentado para la presentación)
-            // Se comentó este bloque para que cualquier usuario nuevo registrado en tiempo real aparezca limpio, con consumos en cero y sin historial previo.
-            /*
-            TipoFlujo normal = tipoFlujoRepository.findAll().stream()
-                    .filter(tf -> "Normal".equalsIgnoreCase(tf.nombreTipoFlujo))
-                    .findFirst()
-                    .orElseGet(() -> tipoFlujoRepository.save(new TipoFlujo("Normal")));
-
-            LocalDate today = LocalDate.now();
-            LecturaConsumo l1 = new LecturaConsumo(today.minusDays(2), LocalTime.of(8, 0), BigDecimal.valueOf(120.5), normal, medidor);
-            LecturaConsumo l2 = new LecturaConsumo(today.minusDays(1), LocalTime.of(8, 30), BigDecimal.valueOf(118.2), normal, medidor);
-            LecturaConsumo l3 = new LecturaConsumo(today, LocalTime.of(9, 0), BigDecimal.valueOf(124.8), normal, medidor);
-            lecturaConsumoRepository.saveAll(List.of(l1, l2, l3));
-            */
-
-            // 5. Inicializar preferencia de tema
+            // 4. Inicializar preferencia de tema
             PreferenciaUsuario pref = new PreferenciaUsuario(newTitular, "light");
             preferenciaRepository.save(pref);
 
             String full = (nombre + " " + apellidoPaterno).trim();
-            return new CurrentUserDto(newTitular.idTitular, full, newTitular.correo, newTitular.rol, newTitular.fotoPerfil);
+            String token = jwtUtil.generateToken(newTitular.correo, newTitular.rol, full);
+
+            return Map.of(
+                "id", newTitular.idTitular,
+                "fullName", full,
+                "email", newTitular.correo,
+                "rol", newTitular.rol,
+                "fotoPerfil", "",
+                "token", token
+            );
         } catch (Exception ex) {
             log.error("Error al registrar usuario", ex);
+            return Map.of("error", ex.getClass().getName(), "message", ex.getMessage());
+        }
+    }
+
+    @PostMapping("/user/login")
+    @Transactional(readOnly = true)
+    public Object loginUser(@RequestBody Map<String, String> body) {
+        try {
+            String email = body.getOrDefault("email", "").trim();
+            String password = body.getOrDefault("password", "").trim();
+
+            if (email.isBlank() || password.isBlank()) {
+                return Map.of("error", "ValidationFailed", "message", "El correo y la contraseña son obligatorios.");
+            }
+
+            Optional<Titular> t = titularRepository.findAll().stream()
+                    .filter(tit -> email.equalsIgnoreCase(tit.correo))
+                    .findFirst();
+
+            if (t.isEmpty()) {
+                return Map.of("error", "Unauthorized", "message", "Correo o contraseña incorrectos.");
+            }
+
+            Titular tt = t.get();
+            if (tt.contrasena == null || !org.mindrot.jbcrypt.BCrypt.checkpw(password, tt.contrasena)) {
+                return Map.of("error", "Unauthorized", "message", "Correo o contraseña incorrectos.");
+            }
+
+            StringBuilder sb = new StringBuilder();
+            if (tt.nombreTitular != null && !tt.nombreTitular.isBlank()) sb.append(tt.nombreTitular.trim());
+            if (tt.apellidoPaterno != null && !tt.apellidoPaterno.isBlank()) {
+                if (sb.length() > 0) sb.append(' ');
+                sb.append(tt.apellidoPaterno.trim());
+            }
+            if (tt.apellidoMaterno != null && !tt.apellidoMaterno.isBlank()) {
+                if (sb.length() > 0) sb.append(' ');
+                sb.append(tt.apellidoMaterno.trim());
+            }
+            String full = sb.length() == 0 ? "Usuario X" : sb.toString();
+
+            String token = jwtUtil.generateToken(tt.correo, tt.rol, full);
+
+            return Map.of(
+                "id", tt.idTitular,
+                "fullName", full,
+                "email", tt.correo == null ? "" : tt.correo,
+                "rol", tt.rol == null ? "DOMESTICO" : tt.rol,
+                "fotoPerfil", tt.fotoPerfil == null ? "" : tt.fotoPerfil,
+                "token", token
+            );
+        } catch (Exception ex) {
+            log.error("Error al iniciar sesión", ex);
             return Map.of("error", ex.getClass().getName(), "message", ex.getMessage());
         }
     }

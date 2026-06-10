@@ -40,6 +40,9 @@ public class Titular {
     @Column(name = "foto_perfil", columnDefinition = "TEXT")
     public String fotoPerfil;
 
+    @Column(name = "contrasena", length = 100)
+    public String contrasena;
+
     public Titular() {
     }
 
@@ -51,5 +54,16 @@ public class Titular {
         this.edad = edad;
         this.celular = celular;
         this.rol = rol;
+    }
+
+    public Titular(String nombreTitular, String apellidoPaterno, String apellidoMaterno, String correo, Integer edad, String celular, String rol, String contrasena) {
+        this.nombreTitular = nombreTitular;
+        this.apellidoPaterno = apellidoPaterno;
+        this.apellidoMaterno = apellidoMaterno;
+        this.correo = correo;
+        this.edad = edad;
+        this.celular = celular;
+        this.rol = rol;
+        this.contrasena = contrasena;
     }
 }

@@ -119,17 +119,19 @@ public class DataSeeder {
         EstadoFacturaMensual emitida = estadoFacturaMensualRepository.save(new EstadoFacturaMensual("Emitida"));
         EstadoFacturaMensual observada = estadoFacturaMensualRepository.save(new EstadoFacturaMensual("Observada"));
 
+        String defaultHashedPassword = org.mindrot.jbcrypt.BCrypt.hashpw("password123", org.mindrot.jbcrypt.BCrypt.gensalt());
+
         Titular titular = titularRepository.save(new Titular(
-                "María Fernanda", "Quispe", "Rojas", "maria.quispe@example.com", 34, "987654321", "DOMESTICO"));
+                "María Fernanda", "Quispe", "Rojas", "maria.quispe@example.com", 34, "987654321", "DOMESTICO", defaultHashedPassword));
 
         Titular comercio = titularRepository.save(new Titular(
-                "Luis", "Condori", "Mendoza", "luis.condori@example.com", 38, "987654322", "COMERCIO"));
+                "Luis", "Condori", "Mendoza", "luis.condori@example.com", 38, "987654322", "COMERCIO", defaultHashedPassword));
 
         Titular tecnico = titularRepository.save(new Titular(
-                "Carlos", "Mendoza", "Ramos", "carlos.mendoza@example.com", 47, "987654323", "TECNICO"));
+                "Carlos", "Mendoza", "Ramos", "carlos.mendoza@example.com", 47, "987654323", "TECNICO", defaultHashedPassword));
 
         Titular municipal = titularRepository.save(new Titular(
-                "Alexis", "Maza", "Lozada", "alexis.maza@example.com", 28, "987654324", "MUNICIPAL"));
+                "Alexis", "Maza", "Lozada", "alexis.maza@example.com", 28, "987654324", "MUNICIPAL", defaultHashedPassword));
 
         Medidor medidor = medidorRepository.save(new Medidor(
                 "ASM-2048", LocalDate.now().minusMonths(8), titular, abierta));
@@ -218,7 +220,7 @@ public class DataSeeder {
         for (int u = 0; u < demoUsers.length; u++) {
             String[] uData = demoUsers[u];
             Titular t = titularRepository.save(new Titular(
-                    uData[0], uData[1], uData[2], uData[3], 25 + u, "99988877" + u, uData[4]));
+                    uData[0], uData[1], uData[2], uData[3], 25 + u, "99988877" + u, uData[4], defaultHashedPassword));
             
             // Inicializar preferencia de usuario (light mode por defecto)
             preferenciaRepository.save(new PreferenciaUsuario(t, "light"));
